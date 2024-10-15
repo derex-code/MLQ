@@ -9,6 +9,9 @@ import org.example.views.MLQView;
 
 import javax.swing.*;
 
+/**
+ * Clase que configura la Interfaz gráfica llamando al controlador desde una clase principal
+ */
 public class Main {
     public static void main(String[] args) {
         SwingUtilities.invokeLater(() -> {
