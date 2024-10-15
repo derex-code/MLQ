@@ -1,10 +1,17 @@
+/**
+ * @autor Olman Alexander Silva 2343025-2724
+ * @version 1.0
+ */
 package org.example.model;
 
-public class Proceso {
+/**
+ * Representa cada proceso con atributos como Burst Time (BT), Arrival Time (AT), etc.
+ */
+public class Process {
     private String etiqueta;
     private int burstTime, arrivalTime, queue, priority;
 
-    public Proceso(String etiqueta, int burstTime, int arrivalTime, int queue, int priority) {
+    public Process(String etiqueta, int burstTime, int arrivalTime, int queue, int priority) {
         this.etiqueta = etiqueta;
         this.burstTime = burstTime;
         this.arrivalTime = arrivalTime;
