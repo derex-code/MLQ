@@ -9,7 +9,7 @@ import org.example.model.Process;
 import org.example.views.MLQView;
 
 import javax.swing.*;
-        import java.awt.event.ActionEvent;
+import java.awt.event.ActionEvent;
 import java.awt.event.ActionListener;
 import java.io.File;
 import java.io.IOException;
@@ -23,12 +23,20 @@ public class MLQController implements ActionListener {
     private MLQView vista;
     private ArrayList<Process> procesos;
 
+    /**
+     * Constructor que inicializa la vista y la lista de procesos.
+     * @param vista La vista que muestra la interfaz gráfica.
+     */
     public MLQController(MLQView vista) {
         this.vista = vista;
         this.procesos = new ArrayList<>();
         this.vista.setControlador(this);
     }
 
+    /**
+     * Maneja los eventos de la interfaz gráfica.
+     * @param e El evento generado por el usuario.
+     */
     @Override
     public void actionPerformed(ActionEvent e) {
         if (e.getActionCommand().equals("Cargar Archivo")) {
@@ -45,6 +53,10 @@ public class MLQController implements ActionListener {
         }
     }
 
+    /**
+     * Carga los procesos desde un archivo de texto.
+     * @param archivo El archivo de entrada con los datos de los procesos.
+     */
     private void cargarProcesos(File archivo) {
         try (Scanner scanner = new Scanner(archivo)) {
             procesos.clear();
@@ -66,6 +78,10 @@ public class MLQController implements ActionListener {
         }
     }
 
+    /**
+     * Ejecuta la simulación usando el algoritmo MLQ.
+     * @return Un String con los resultados de la simulación.
+     */
     private String ejecutarSimulacion() {
         MLQScheduler scheduler = new MLQScheduler(procesos);
         return scheduler.simular();

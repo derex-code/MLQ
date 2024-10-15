@@ -1,18 +1,34 @@
+/**
+ * @autor Olman Alexander Silva 2343025-2724
+ * @version 1.0
+ */
 package org.example.model;
+
 import java.util.*;
 
+/**
+ * Clase que implementa el algoritmo de planificación Multilevel Queue (MLQ).
+ */
 public class MLQScheduler {
     private List<Process> procesos;
 
+    /**
+     * Constructor que inicializa la lista de procesos.
+     * @param procesos Lista de procesos a planificar.
+     */
     public MLQScheduler(List<Process> procesos) {
         this.procesos = procesos;
     }
 
+    /**
+     * Simula la ejecución de los procesos según el algoritmo MLQ.
+     * @return Un String con los resultados de la simulación.
+     */
     public String simular() {
         StringBuilder resultados = new StringBuilder();
-        Map<Integer, Queue<Process>> colas = new TreeMap<>(); // Tres niveles de prioridad
+        Map<Integer, Queue<Process>> colas = new TreeMap<>();
 
-        // Clasificar procesos en sus respectivas colas por prioridad
+        // Clasifica los procesos en colas según su nivel de prioridad.
         for (Process p : procesos) {
             colas.putIfAbsent(p.getQueue(), new LinkedList<>());
             colas.get(p.getQueue()).add(p);

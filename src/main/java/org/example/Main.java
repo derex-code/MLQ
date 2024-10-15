@@ -10,7 +10,7 @@ import org.example.views.MLQView;
 import javax.swing.*;
 
 /**
- * Clase que configura la Interfaz gráfica llamando al controlador desde una clase principal
+ * Clase principal para iniciar la aplicación del simulador MLQ.
  */
 public class Main {
     public static void main(String[] args) {
