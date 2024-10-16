@@ -40,7 +40,7 @@ public class MLQController implements ActionListener {
     @Override
     public void actionPerformed(ActionEvent e) {
         if (e.getActionCommand().equals("Cargar Archivo")) {
-            JFileChooser fileChooser = new JFileChooser();
+            JFileChooser fileChooser = new JFileChooser("src/main/resources/ProcessFiles");
             int seleccion = fileChooser.showOpenDialog(null);
             if (seleccion == JFileChooser.APPROVE_OPTION) {
                 File archivo = fileChooser.getSelectedFile();
@@ -79,11 +79,50 @@ public class MLQController implements ActionListener {
     }
 
     /**
-     * Ejecuta la simulación usando el algoritmo MLQ.
+     * Ejecuta la simulación usando el algoritmo MLQ con los quantums y la política seleccionada.
      * @return Un String con los resultados de la simulación.
      */
     private String ejecutarSimulacion() {
-        MLQScheduler scheduler = new MLQScheduler(procesos);
-        return scheduler.simular();
+        try {
+            // Solicita los quantums para las colas 1 y 2
+            int quantum1 = solicitarQuantum("Ingresa el quantum para la cola 1 (RR):");
+            int quantum2 = solicitarQuantum("Ingresa el quantum para la cola 2 (RR):");
+
+            // Selección de la política para la tercera cola
+            String[] opciones = {"SJF", "FCFS", "STCF"};
+            String politicaCola3 = (String) JOptionPane.showInputDialog(
+                    null,
+                    "Selecciona la política para la tercera cola:",
+                    "Política de Cola 3",
+                    JOptionPane.QUESTION_MESSAGE,
+                    null,
+                    opciones,
+                    opciones[0]
+            );
+
+            if (politicaCola3 == null) {
+                return "Simulación cancelada por el usuario.";
+            }
+
+            // Crear el simulador con los parámetros seleccionados
+            MLQScheduler scheduler = new MLQScheduler(procesos, quantum1, quantum2, politicaCola3);
+            return scheduler.simular();
+        } catch (NumberFormatException ex) {
+            return "Error: El quantum debe ser un número entero.";
+        }
+    }
+
+    /**
+     * Solicita un quantum al usuario mediante un cuadro de diálogo.
+     * @param mensaje El mensaje a mostrar en el cuadro de diálogo.
+     * @return El quantum ingresado por el usuario.
+     * @throws NumberFormatException Si el usuario ingresa un valor no numérico.
+     */
+    private int solicitarQuantum(String mensaje) throws NumberFormatException {
+        String input = JOptionPane.showInputDialog(null, mensaje, "Ingresar Quantum", JOptionPane.QUESTION_MESSAGE);
+        if (input == null) {
+            throw new NumberFormatException("Simulación cancelada por el usuario.");
+        }
+        return Integer.parseInt(input.trim());
     }
 }
