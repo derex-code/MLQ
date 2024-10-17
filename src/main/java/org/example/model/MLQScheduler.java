@@ -8,18 +8,22 @@ import java.util.*;
 
 /**
  * Clase que implementa el algoritmo de planificación Multilevel Queue (MLQ).
+ * Se encarga de gestionar procesos distribuidos en múltiples colas con diferentes políticas,
+ * como Round Robin (RR), Shortest Job First (SJF), First Come First Serve (FCFS),
+ * y Shortest Time to Completion First (STCF).
  */
 public class MLQScheduler {
-    private List<Process> procesos;
-    private int quantum1;
-    private int quantum2;
-    private String politicaCola3;
+    private List<Process> procesos;  // Lista de procesos a planificar
+    private int quantum1;            // Quantum para la primera cola (RR)
+    private int quantum2;            // Quantum para la segunda cola (RR)
+    private String politicaCola3;    // Política de la tercera cola (SJF, FCFS, o STCF)
 
     /**
-     * Constructor que inicializa los procesos, los quantums y la política de la tercera cola.
-     * @param procesos Lista de procesos.
-     * @param quantum1 Quantum para la primera cola (RR).
-     * @param quantum2 Quantum para la segunda cola (RR).
+     * Constructor que inicializa los procesos, los quantums, y la política de la tercera cola.
+     *
+     * @param procesos Lista de procesos a planificar.
+     * @param quantum1 Quantum para la primera cola con política Round Robin (RR).
+     * @param quantum2 Quantum para la segunda cola con política Round Robin (RR).
      * @param politicaCola3 Política para la tercera cola (SJF, FCFS, o STCF).
      */
     public MLQScheduler(List<Process> procesos, int quantum1, int quantum2, String politicaCola3) {
@@ -30,15 +34,16 @@ public class MLQScheduler {
     }
 
     /**
-     * Simula la ejecución de los procesos según el algoritmo MLQ.
+     * Simula la ejecución de los procesos según las políticas asignadas a cada cola.
+     *
+     * @param nombreArchivo Nombre del archivo de entrada.
      * @return Un String con los resultados de la simulación.
      */
-    public String simular() {
-        StringBuilder resultados = new StringBuilder();
+    public String simular(String nombreArchivo) {
         Map<Integer, Queue<Process>> colas = new TreeMap<>();
         List<Process> finalizados = new ArrayList<>();
 
-        // Clasificar procesos en colas según su nivel de prioridad
+        // Clasificar los procesos por cola
         for (Process p : procesos) {
             colas.putIfAbsent(p.getQueue(), new LinkedList<>());
             colas.get(p.getQueue()).add(p);
@@ -46,15 +51,17 @@ public class MLQScheduler {
 
         int tiempoActual = 0;
 
-        // Ejecutar las colas 1 y 2 con Round Robin
+        // Ejecutar Cola 1 (Round Robin con quantum1)
         if (colas.containsKey(1)) {
-            tiempoActual = ejecutarRoundRobin(colas.get(1), tiempoActual, quantum1, finalizados);
-        }
-        if (colas.containsKey(2)) {
-            tiempoActual = ejecutarRoundRobin(colas.get(2), tiempoActual, quantum2, finalizados);
+            tiempoActual = ejecutarRoundRobin(colas.get(1), tiempoActual, quantum1, colas, 2, finalizados);
         }
 
-        // Ejecutar la tercera cola con la política seleccionada
+        // Ejecutar Cola 2 (Round Robin con quantum2)
+        if (colas.containsKey(2)) {
+            tiempoActual = ejecutarRoundRobin(colas.get(2), tiempoActual, quantum2, colas, 3, finalizados);
+        }
+
+        // Ejecutar Cola 3 con la política seleccionada
         if (colas.containsKey(3)) {
             switch (politicaCola3) {
                 case "SJF":
@@ -69,19 +76,29 @@ public class MLQScheduler {
             }
         }
 
-        // Generar los resultados finales
-        resultados.append(generarResultados(finalizados));
-        return resultados.toString();
+        return generarResultados(finalizados, nombreArchivo);
     }
 
     /**
-     * Ejecuta la política Round Robin.
+     * Ejecuta la política Round Robin (RR) en la cola especificada y mueve los procesos incompletos
+     * a la siguiente cola si es necesario.
+     *
+     * @param cola Cola de procesos a ejecutar.
+     * @param tiempoActual Tiempo actual del sistema.
+     * @param quantum Quantum asignado para esta cola.
+     * @param colas Estructura que contiene todas las colas.
+     * @param siguienteCola La siguiente cola donde se moverán los procesos incompletos.
+     * @param finalizados Lista de procesos que ya han sido completados.
+     * @return El tiempo actual después de ejecutar todos los procesos.
      */
-    private int ejecutarRoundRobin(Queue<Process> cola, int tiempoActual, int quantum, List<Process> finalizados) {
+    private int ejecutarRoundRobin(Queue<Process> cola, int tiempoActual, int quantum,
+                                   Map<Integer, Queue<Process>> colas, int siguienteCola,
+                                   List<Process> finalizados) {
+
         Queue<Process> pendientes = new LinkedList<>(cola);
         Map<Process, Integer> tiemposRestantes = new HashMap<>();
 
-        // Inicializa los tiempos restantes de cada proceso
+        // Inicializar tiempos restantes para cada proceso
         for (Process p : pendientes) {
             tiemposRestantes.put(p, p.getBurstTime());
         }
@@ -89,36 +106,42 @@ public class MLQScheduler {
         while (!pendientes.isEmpty()) {
             Process proceso = pendientes.poll();
             int tiempoRestante = tiemposRestantes.get(proceso);
-            int tiempoEjecutado = Math.min(quantum, tiempoRestante);
 
-            int tiempoEspera = Math.max(0, tiempoActual - proceso.getArrivalTime());
+            // Registrar el tiempo de respuesta (RT) si es la primera vez que se ejecuta
+            if (proceso.getResponseTime() == -1) {
+                proceso.setResponseTime(tiempoActual);
+            }
+
+            // Ejecutar por quantum o tiempo restante, lo que sea menor
+            int tiempoEjecutado = Math.min(quantum, tiempoRestante);
             tiempoActual += tiempoEjecutado;
             tiempoRestante -= tiempoEjecutado;
-
-            // Actualiza el tiempo restante del proceso
             tiemposRestantes.put(proceso, tiempoRestante);
 
-            // Si el proceso terminó, lo movemos a la lista de finalizados
-            if (tiempoRestante == 0) {
+            if (tiempoRestante > 0 && tiempoRestante < quantum) {
+                // Mover a la siguiente cola si el proceso no terminó y tiene tiempo restante
+                colas.putIfAbsent(siguienteCola, new LinkedList<>());
+                colas.get(siguienteCola).add(proceso);
+            } else if (tiempoRestante > 0) {
+                // Reinserta el proceso si aún tiene tiempo suficiente para otro ciclo de RR
+                pendientes.add(proceso);
+            } else {
+                // Si terminó, registrar CT y mover a finalizados
                 proceso.setCompletionTime(tiempoActual);
                 finalizados.add(proceso);
-            } else {
-                // Si no ha terminado, lo volvemos a añadir a la cola
-                pendientes.add(proceso);
             }
         }
         return tiempoActual;
     }
 
-    /**
-     * Ejecuta la política SJF (Shortest Job First).
-     */
     private int ejecutarSJF(Queue<Process> cola, int tiempoActual, List<Process> finalizados) {
         List<Process> procesosOrdenados = new ArrayList<>(cola);
         procesosOrdenados.sort(Comparator.comparingInt(Process::getBurstTime));
 
         for (Process proceso : procesosOrdenados) {
-            int tiempoEspera = Math.max(0, tiempoActual - proceso.getArrivalTime());
+            if (proceso.getResponseTime() == -1) {
+                proceso.setResponseTime(tiempoActual);
+            }
             tiempoActual += proceso.getBurstTime();
             proceso.setCompletionTime(tiempoActual);
             finalizados.add(proceso);
@@ -126,17 +149,12 @@ public class MLQScheduler {
         return tiempoActual;
     }
 
-    /**
-     * Ejecuta la política FCFS (First Come First Serve).
-     * @param cola Cola de procesos a ejecutar.
-     * @param tiempoActual El tiempo actual del sistema.
-     * @param finalizados Lista de procesos finalizados.
-     * @return El tiempo actual después de ejecutar todos los procesos de la cola.
-     */
     private int ejecutarFCFS(Queue<Process> cola, int tiempoActual, List<Process> finalizados) {
         while (!cola.isEmpty()) {
             Process proceso = cola.poll();
-            int tiempoEspera = Math.max(0, tiempoActual - proceso.getArrivalTime());
+            if (proceso.getResponseTime() == -1) {
+                proceso.setResponseTime(tiempoActual);
+            }
             tiempoActual += proceso.getBurstTime();
             proceso.setCompletionTime(tiempoActual);
             finalizados.add(proceso);
@@ -144,69 +162,59 @@ public class MLQScheduler {
         return tiempoActual;
     }
 
-    /**
-     * Ejecuta la política STCF (Shortest Time to Completion First).
-     * @param cola Cola de procesos a ejecutar.
-     * @param tiempoActual El tiempo actual del sistema.
-     * @param finalizados Lista de procesos finalizados.
-     * @return El tiempo actual después de ejecutar todos los procesos.
-     */
     private int ejecutarSTCF(Queue<Process> cola, int tiempoActual, List<Process> finalizados) {
         PriorityQueue<Process> pq = new PriorityQueue<>(Comparator.comparingInt(Process::getBurstTime));
 
         while (!cola.isEmpty() || !pq.isEmpty()) {
-            // Añadir procesos que hayan llegado al sistema al priority queue
             while (!cola.isEmpty() && cola.peek().getArrivalTime() <= tiempoActual) {
                 pq.add(cola.poll());
             }
 
             if (!pq.isEmpty()) {
                 Process proceso = pq.poll();
+                if (proceso.getResponseTime() == -1) {
+                    proceso.setResponseTime(tiempoActual);
+                }
                 tiempoActual += proceso.getBurstTime();
                 proceso.setCompletionTime(tiempoActual);
                 finalizados.add(proceso);
             } else {
-                // Si no hay procesos listos, avanzar el tiempo
                 tiempoActual++;
             }
         }
         return tiempoActual;
     }
 
-
     /**
      * Genera los resultados finales de los procesos ejecutados.
+     *
      * @param finalizados Lista de procesos finalizados.
-     * @return Un String con los resultados formateados según el archivo de salida esperado.
+     * @param nombreArchivo Nombre del archivo de entrada.
+     * @return Un String con los resultados formateados.
      */
-    private String generarResultados(List<Process> finalizados) {
+    private String generarResultados(List<Process> finalizados, String nombreArchivo) {
         StringBuilder resultados = new StringBuilder();
-
-        // Añadir la cabecera del archivo
-        resultados.append("# archivo: mlq001.txt\n");
+        resultados.append(String.format("# archivo: %s\n", nombreArchivo));
         resultados.append("# etiqueta; BT; AT; Q; Pr; WT; CT; RT; TAT\n");
 
         double totalWT = 0, totalTAT = 0, totalRT = 0, totalCT = 0;
 
         for (Process proceso : finalizados) {
-            int CT = proceso.getCompletionTime();  // Completion Time
-            int TAT = CT - proceso.getArrivalTime();  // Turnaround Time (TAT)
-            int WT = TAT - proceso.getBurstTime();  // Waiting Time (WT)
-            int RT = proceso.getCompletionTime() - proceso.getBurstTime();  // Response Time (RT)
+            int CT = proceso.getCompletionTime();
+            int TAT = CT - proceso.getArrivalTime();
+            int WT = TAT - proceso.getBurstTime();
+            int RT = proceso.getResponseTime() - proceso.getArrivalTime();
 
-            // Sumar para los promedios
             totalWT += WT;
             totalTAT += TAT;
             totalRT += RT;
             totalCT += CT;
 
-            // Agregar los resultados de cada proceso
             resultados.append(String.format("%s;%d;%d;%d;%d;%d;%d;%d;%d\n",
                     proceso.getEtiqueta(), proceso.getBurstTime(), proceso.getArrivalTime(),
                     proceso.getQueue(), proceso.getPriority(), WT, CT, RT, TAT));
         }
 
-        // Calcular los promedios
         int numProcesos = finalizados.size();
         resultados.append(String.format("WT=%.2f; CT=%.2f; RT=%.2f; TAT=%.2f;\n",
                 totalWT / numProcesos, totalCT / numProcesos, totalRT / numProcesos, totalTAT / numProcesos));
@@ -214,3 +222,4 @@ public class MLQScheduler {
         return resultados.toString();
     }
 }
+

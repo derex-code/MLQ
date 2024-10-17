@@ -22,6 +22,8 @@ import java.util.Scanner;
 public class MLQController implements ActionListener {
     private MLQView vista;
     private ArrayList<Process> procesos;
+    private File archivoCargado;  // Variable para almacenar el archivo seleccionado
+
 
     /**
      * Constructor que inicializa la vista y la lista de procesos.
@@ -43,15 +45,21 @@ public class MLQController implements ActionListener {
             JFileChooser fileChooser = new JFileChooser("src/main/resources/ProcessFiles");
             int seleccion = fileChooser.showOpenDialog(null);
             if (seleccion == JFileChooser.APPROVE_OPTION) {
-                File archivo = fileChooser.getSelectedFile();
-                cargarProcesos(archivo);
+                archivoCargado = fileChooser.getSelectedFile();  // Guardar el archivo cargado
+                cargarProcesos(archivoCargado);
                 JOptionPane.showMessageDialog(null, "Procesos cargados correctamente.");
             }
         } else if (e.getActionCommand().equals("Ejecutar Simulación")) {
-            String resultados = ejecutarSimulacion();
-            vista.mostrarResultados(resultados);
+            // Verificar si se cargó un archivo antes de ejecutar la simulación
+            if (archivoCargado != null) {
+                String resultados = ejecutarSimulacion(archivoCargado);  // Pasar el archivo
+                vista.mostrarResultados(resultados);
+            } else {
+                JOptionPane.showMessageDialog(null, "Error: No se ha cargado ningún archivo.");
+            }
         }
     }
+
 
     /**
      * Carga los procesos desde un archivo de texto.
@@ -80,15 +88,14 @@ public class MLQController implements ActionListener {
 
     /**
      * Ejecuta la simulación usando el algoritmo MLQ con los quantums y la política seleccionada.
+     * @param archivo El archivo de entrada.
      * @return Un String con los resultados de la simulación.
      */
-    private String ejecutarSimulacion() {
+    private String ejecutarSimulacion(File archivo) {
         try {
-            // Solicita los quantums para las colas 1 y 2
             int quantum1 = solicitarQuantum("Ingresa el quantum para la cola 1 (RR):");
             int quantum2 = solicitarQuantum("Ingresa el quantum para la cola 2 (RR):");
 
-            // Selección de la política para la tercera cola
             String[] opciones = {"SJF", "FCFS", "STCF"};
             String politicaCola3 = (String) JOptionPane.showInputDialog(
                     null,
@@ -104,13 +111,13 @@ public class MLQController implements ActionListener {
                 return "Simulación cancelada por el usuario.";
             }
 
-            // Crear el simulador con los parámetros seleccionados
             MLQScheduler scheduler = new MLQScheduler(procesos, quantum1, quantum2, politicaCola3);
-            return scheduler.simular();
+            return scheduler.simular(archivo.getName());  // Pasar el nombre del archivo
         } catch (NumberFormatException ex) {
             return "Error: El quantum debe ser un número entero.";
         }
     }
+
 
     /**
      * Solicita un quantum al usuario mediante un cuadro de diálogo.
