@@ -134,51 +134,96 @@ public class MLQScheduler {
         return tiempoActual;
     }
 
+    /**
+     * Ejecuta la política Shortest Job First (SJF).
+     * Ordena los procesos según el tiempo de ráfaga (Burst Time) y los ejecuta en ese orden.
+     *
+     * @param cola Cola de procesos a ejecutar.
+     * @param tiempoActual El tiempo actual del sistema al iniciar la ejecución.
+     * @param finalizados Lista de procesos que han terminado su ejecución.
+     * @return El tiempo actual después de ejecutar todos los procesos en la cola.
+     */
     private int ejecutarSJF(Queue<Process> cola, int tiempoActual, List<Process> finalizados) {
         List<Process> procesosOrdenados = new ArrayList<>(cola);
+        // Ordenar los procesos por Burst Time en orden ascendente.
         procesosOrdenados.sort(Comparator.comparingInt(Process::getBurstTime));
 
         for (Process proceso : procesosOrdenados) {
+            // Registrar el tiempo de respuesta si es la primera vez que se ejecuta.
             if (proceso.getResponseTime() == -1) {
                 proceso.setResponseTime(tiempoActual);
             }
+            // Sumar el Burst Time del proceso al tiempo actual.
             tiempoActual += proceso.getBurstTime();
+            // Registrar el tiempo de finalización del proceso.
             proceso.setCompletionTime(tiempoActual);
+            // Mover el proceso a la lista de finalizados.
             finalizados.add(proceso);
         }
         return tiempoActual;
     }
 
+    /**
+     * Ejecuta la política First Come First Serve (FCFS).
+     * Los procesos se ejecutan en el orden en que llegaron a la cola.
+     *
+     * @param cola Cola de procesos a ejecutar.
+     * @param tiempoActual El tiempo actual del sistema al iniciar la ejecución.
+     * @param finalizados Lista de procesos que han terminado su ejecución.
+     * @return El tiempo actual después de ejecutar todos los procesos en la cola.
+     */
     private int ejecutarFCFS(Queue<Process> cola, int tiempoActual, List<Process> finalizados) {
         while (!cola.isEmpty()) {
-            Process proceso = cola.poll();
+            Process proceso = cola.poll();  // Extraer el siguiente proceso en la cola.
+            // Registrar el tiempo de respuesta si es la primera vez que se ejecuta.
             if (proceso.getResponseTime() == -1) {
                 proceso.setResponseTime(tiempoActual);
             }
+            // Sumar el Burst Time del proceso al tiempo actual.
             tiempoActual += proceso.getBurstTime();
+            // Registrar el tiempo de finalización del proceso.
             proceso.setCompletionTime(tiempoActual);
+            // Mover el proceso a la lista de finalizados.
             finalizados.add(proceso);
         }
         return tiempoActual;
     }
 
+    /**
+     * Ejecuta la política Shortest Time to Completion First (STCF).
+     * Los procesos con el menor tiempo restante se ejecutan primero.
+     * Si un proceso con menor tiempo llega, interrumpe la ejecución del proceso actual.
+     *
+     * @param cola Cola de procesos a ejecutar.
+     * @param tiempoActual El tiempo actual del sistema al iniciar la ejecución.
+     * @param finalizados Lista de procesos que han terminado su ejecución.
+     * @return El tiempo actual después de ejecutar todos los procesos.
+     */
     private int ejecutarSTCF(Queue<Process> cola, int tiempoActual, List<Process> finalizados) {
         PriorityQueue<Process> pq = new PriorityQueue<>(Comparator.comparingInt(Process::getBurstTime));
 
+        // Mientras haya procesos en la cola o en la priority queue.
         while (!cola.isEmpty() || !pq.isEmpty()) {
+            // Mover procesos disponibles a la priority queue según su tiempo de llegada.
             while (!cola.isEmpty() && cola.peek().getArrivalTime() <= tiempoActual) {
                 pq.add(cola.poll());
             }
 
             if (!pq.isEmpty()) {
+                // Extraer el proceso con el menor tiempo de ráfaga.
                 Process proceso = pq.poll();
+                // Registrar el tiempo de respuesta si es la primera vez que se ejecuta.
                 if (proceso.getResponseTime() == -1) {
                     proceso.setResponseTime(tiempoActual);
                 }
+                // Sumar el Burst Time del proceso al tiempo actual.
                 tiempoActual += proceso.getBurstTime();
+                // Registrar el tiempo de finalización del proceso.
                 proceso.setCompletionTime(tiempoActual);
+                // Mover el proceso a la lista de finalizados.
                 finalizados.add(proceso);
             } else {
+                // Si no hay procesos listos, avanzar el tiempo.
                 tiempoActual++;
             }
         }
